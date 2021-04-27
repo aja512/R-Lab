@@ -1,0 +1,148 @@
+---
+title: "EDA on IRIS Dataset"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+# Load Libraries
+```{r}
+library(ggplot2)
+library(stats)
+library(dplyr)
+library(datasets)
+library(ISLR)
+```
+## Load Data
+```{r}
+data=iris
+class(data)
+dim(data)
+?iris
+```
+```{r}
+str(data)
+```
+The summary( ) function in R is used to obtain the summary statistics of the dataset, including minimum value, 1st quantile, median, mean 3rd quantile, maximum value for each numerical variable and the count for each level of the only categorical variable “species”, which is displayed in Table 1.
+```{r}
+summary(data)
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+is.na(data)
+```
+
+```{r}
+sum(is.na(data))
+sum(!is.na(data))
+```
+
+```{r}
+colSums(!is.na(data))
+```
+# Data Visualization
+```{r}
+# Visualization
+plot(data)
+plot(data$Sepal.Length,data$Sepal.Width)
+
+# Visualization Another Way
+tw=select(data,1:2)
+plot(tw)
+ggplot(tw,mapping=aes(x=Sepal.Length,y=Sepal.Width))+geom_point(alpha=0.9,colour="green")
+```
+## Histogram and Density Plot
+The histograms and density plots of the four variables were plotted in R. What we see from those plots is that sepal length and sepal width do not vary much across species, however, petal length and petal width are quite different for different species. As shown in Figure 1 and Figure 2, petal length of versicolor and virginica are approximately normally distributed with different means and similar variability. Also, species setosa lies far away from these two species.
+```{r}
+## Visualization with Histogram
+iris%>%
+  ggplot(aes(x=Petal.Width, fill=Species))+
+  geom_histogram()
+```
+```{r}
+iris%>%
+    ggplot(aes(x=Petal.Length, fill=Species))+
+    geom_density(alpha=0.5)
+```
+## Scatter Plots
+Scatter plots give us a good idea of how much one variable is affected by another. In other words, it is very helpful when we are trying to see if there is any correlation between two variables. As shown in Fig. 3, there is a high correlation between the sepal length and the sepal width of the Setosa iris flowers, while the correlation is somewhat less high for the Virginica and Versicolor flowers: the data points are more spread out over the graph and do not form a cluster like shown in the case of the Setosa flowers. The scatter plot that maps the petal length and the petal width displayed as Fig. 4 tells a similar story: The graph indicates a positive correlation between the petal length and the petal width for all different species that are included into the “iris” data set. More importantly, the scatter plots reveal a strong classification criteria. Setosa has the smallest petals versicolor has medium-sized petals and virginica has the largest petals.
+```{r}
+iris%>%
+    ggplot(aes(x = Sepal.Length, y = Sepal.Width, colour = Species))+
+    geom_point(size = 3)
+```
+```{r}
+iris%>%
+    ggplot(aes(x = Petal.Length, y = Petal.Width, colour = Species))+
+    geom_point(size = 3)
+```
+
+# K-Nearest Neighbor
+
+## Normalization
+As part of the data preparation, in some cases, data need to be normalized so that distances between variables with larger ranges will not be over-emphasized. In our case, the Iris data set does not need to be normalized. All values of all attributes are contained within the range of 0.1 and 7.9.
+
+## Splitting Data Set into Training and Test Sets
+Random sampling is used to take 60% of the original data set to form the training set. In the training set, the numbers of each species are: 28 setosa, 30 versicolor, and 32 virginica. The amount of instances of all three species are more or less equal so that we do not favor one or the other class in the predictions.
+
+## K-Nearest Neighbor in R
+As stated above, the iris flower data set was split into a training data set (60%) and a testing data set(40%) to assess the classification accuracy. There is not a strong relationship between the training error rate and the test error rate. With K=1, the KNN training error rate is 0, but the test error rate is quite high compared the those achieved by other K values. In Figure 5, we have plotted the KNN test and train errors as a function of K. As K increases, the method becomes less flexible. The training error rate consistently increases as the flexibility decreases. However, the test error rate exhibits a characteristic U-shape, declining at first (with a minimum at approximately K=6) before increasing again when the method becomes excessively inflexible.
+```{r}
+########### KNN #############
+# random sample a training data set
+set.seed(12345)
+allrows <- 1:nrow(iris)
+trainrows <- sample(allrows, replace = F, size = 0.6*length(allrows))
+train_iris <- iris[trainrows, 1:4]
+train_label <- iris[trainrows, 5]
+table(train_label)
+```
+
+```{r}
+test_iris <- iris[-trainrows, 1:4]
+test_label <- iris[-trainrows, 5]
+table(test_label)
+```
+
+```{r}
+library(class)
+error.train <- replicate(0,30)
+for(k in 1:30) {
+    pred_iris <- knn(train = train_iris, test = train_iris, cl = train_label, k)
+    error.train[k]<-1-mean(pred_iris==train_label)
+}
+
+error.train <- unlist(error.train, use.names=FALSE)
+
+error.test <- replicate(0,30)
+for(k in 1:30) {
+    pred_iris <- knn(train = train_iris, test = test_iris, cl = train_label, k)
+    error.test[k]<-1-mean(pred_iris==test_label)
+}
+
+error.test <- unlist(error.test, use.names = FALSE)
+
+plot(error.train, type="o", ylim=c(0,0.15), col="blue", xlab = "K values", ylab = "Misclassification errors")
+lines(error.test, type = "o", col="red")
+legend("topright", legend=c("Training error","Test error"), col = c("blue","red"), lty=1:1)
+```
+Based on Figure 5, K=6 yields the smallest test error rates. Therefore, we chose K=6 as the best number of neighbors for KNN in our prediction. The classification result based on K==6 is shown in the scatter plot in Figure 6. Since we do have the real values of the target variable, we would like to see what are the points that were misclassified. By comparing the two scatter plots in Figure 6 and Figure 7, we can see a couple of points, one versicolor is misclassified as virginica and one virginica is misclassified as versicolor.
+```{r}
+pred_iris<-knn(train = train_iris, test = test_iris, cl = train_label, 6)
+result <- cbind(test_iris, pred_iris)
+combinetest <- cbind(test_iris, test_label)
+
+result%>%
+    ggplot(aes(x=Petal.Width, y=Petal.Length, color=pred_iris))+
+    geom_point(size=3)
+```
+```{r}
+combinetest%>%
+    ggplot(aes(x=Petal.Width, y=Petal.Length, color=test_label))+
+    geom_point(size=3)
+```
