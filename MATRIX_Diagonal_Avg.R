@@ -8,12 +8,8 @@ show(matrix_1)
 average=0
 total=0
 
-for (k in 1:3) {
-  for (sec in 1:3) {
-    total <- total+matrix_1[k,sec]
-  }
-  average=total/9
-}
+total <- sum(matrix_1)
+average <- total/9.0
 show(total)
 show(average)
 
