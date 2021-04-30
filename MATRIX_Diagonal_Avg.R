@@ -9,7 +9,7 @@ average=0
 total=0
 
 total <- sum(matrix_1)
-average <- total/9.0
+average <- mean(matrix_1)
 show(total)
 show(average)
 
